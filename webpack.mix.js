@@ -31,6 +31,7 @@ mix.scripts(
         'node_modules/ip-address/dist/ip-address-globals.js',
 
         'public/js/ixp-manager.js',
+        'public/js/faucet.js'
 
 
         // etc. etc.

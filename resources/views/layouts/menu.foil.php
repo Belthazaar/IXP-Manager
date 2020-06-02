@@ -399,10 +399,16 @@
                     PHP Info
                 </a>
             </li>
-
+            
             <li class="<?= !request()->is( 'login-history/*' ) ?: 'active' ?>">
                 <a href="<?= route( 'login-history@list' ) ?>" class="nav-link">
                     Last Logins
+                </a>
+            </li>
+            
+            <li class="<?= !request()->is( 'utils/faucet' ) ?: 'active' ?>">
+                <a href="<?= route( 'faucet@index' ) ?>" class="nav-link">
+                    Faucet
                 </a>
             </li>
 

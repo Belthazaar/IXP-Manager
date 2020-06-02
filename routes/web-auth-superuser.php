@@ -210,7 +210,18 @@ Route::group( [ 'prefix' => 'utils' ], function() {
     Route::get( 'phpinfo', function() {
         return view( 'utils/phpinfo' );
     })->name('utils/phpinfo');
+//    Route::get( 'faucet', function() {
+//        return view( 'utils/faucet' );
+//    })->name('utils/faucet');
 
+});
+
+Route::group( [ 'prefix' => 'faucet' ], function() {
+    Route::get(     '',                                 'FaucetController@index'                        )->name( 'faucet@index' );
+    Route::get(     'generateConfig',                   'FaucetController@generateConfig'               )->name( 'faucet@generateConfig' );
+    Route::get(     'getFaucetYaml',                    'FaucetController@getFaucetYaml'                )->name( 'faucet@getFaucetYaml' );
+    Route::get(     'getTopologyJson',                  'FaucetController@getTopologyJson'              )->name( 'faucet@getTopologyJson' );
+    Route::get(     'getLatestLogs',                    'FaucetController@getLatestLogs'                )->name( 'faucet@getLatestLogs' );
 });
 
 
