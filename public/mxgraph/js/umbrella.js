@@ -670,7 +670,7 @@ Umbrella.prototype.saveYaml = function(yamlObj){
     }).done(function(msg){
         console.log("save faucet success")
         console.log(msg)
-        alert("faucet config generated successfully. Save to run network tester")
+        alert("faucet config generated successfully. Saved to the push-on-green module")
     })
     .fail(function(){
         console.log("something went wrong in saving faucet")

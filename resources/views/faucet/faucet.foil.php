@@ -24,10 +24,10 @@ Faucet Configuration Generator
                     <h4>Faucet Configuration Generator </h4>
                 </div>
                 <div class="row tw-mb-6">
-                    <p>Opens Graphing component. Please verify that all members connected to switches have an ipv4 and ipv6 address</p>
+                    <p>Open diagramming component. Please verify that all members connected to switches have an ipv4 and ipv6 address</p>
                 </div>
                 <div class="row tw-mb-6">
-                    <a class="btn btn-white" type="button" href="<?= route( 'faucet@MxGraph' ) ?>"> To graphing </a>
+                    <a class="btn btn-white" type="button" href="<?= route( 'faucet@MxGraph' ) ?>"> To Diagramming </a>
                 </div>
                 <div class="row tw-mb-6">
                     <p>Download the latest Faucet config that has been generated </p>
