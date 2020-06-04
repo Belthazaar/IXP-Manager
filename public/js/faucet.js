@@ -4,13 +4,15 @@ function display() {
 
     $.ajax(url)
         .done(function (data) {
-            // var a = document.createElement("a");
-            // var file = new Blob([data], {type: 'text/plain'});
-            // a.href = URL.createObjectURL(file);
-            // a.download = 'faucet.txt';
-            // a.click();
-            alert(data);
-            appendLinks();
+            var a = document.createElement("a");
+            var file = new Blob([data], {type: 'text/plain'});
+            a.href = URL.createObjectURL(file);
+            a.download = 'faucet.txt';
+            a.click();
+            // alert(data);
+            if (!document.getElementById('done')) {
+                appendLinks();
+            }
             
         })
         .fail(function (){
@@ -37,7 +39,10 @@ function appendLinks(){
         a.appendChild(r);
         index++;
     };
-    
+    var r = document.createElement("div");
+    r.setAttribute("class", "row tw-mb-6");
+    r.setAttribute("id", "done");
+    a.appendChild(r);
 
 }
 

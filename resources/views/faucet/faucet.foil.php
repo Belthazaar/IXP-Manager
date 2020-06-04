@@ -9,11 +9,9 @@ Faucet Configuration Generator
 
 
 <?php $this->section( 'content' ) ?>
-
-<!-- <iframe id="if-phpinfo"
-            style="border: none; height: 100%; width: 100%;"
-            src="<?= route( 'phpinfo' ) ?>"></iframe> -->
-
+<style>.loading { 
+  font-size: 1.5em; 
+} </style>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h3>Faucet config generator and tester</h3>
     
@@ -26,15 +24,28 @@ Faucet Configuration Generator
                     <h4>Faucet Configuration Generator </h4>
                 </div>
                 <div class="row tw-mb-6">
-                    <p>Generates a Faucet config and runs a network simulation to check and verify that all hosts can communicate with one another and all switches have redundancy paths </p>
+                    <p>Opens Graphing component. Please verify that all members connected to switches have an ipv4 and ipv6 address</p>
                 </div>
                 <div class="row tw-mb-6">
-                    <a class="btn btn-white ml-2" type="button" onclick="display()"> Generate configs </a>
+                    <a class="btn btn-white" type="button" href="<?= route( 'faucet@MxGraph' ) ?>"> To graphing </a>
                 </div>
                 <div class="row tw-mb-6">
-                    <a class="btn btn-white ml-2" type="button" onclick="openMxGraph()"> To MxGraph </a>
+                    <p>Download the latest Faucet config that has been generated </p>
                 </div>
-                <div id="toAdd">
+                <div class="row tw-mb-6">
+                    <a class="btn btn-white" type="button" onclick="getYaml()"> Get faucet.yaml </a>
+                </div>
+                <div class="row tw-mb-6">
+                    <p>Download the latest topology file that has been generated </p>
+                </div>
+                <div class="row tw-mb-6">
+                    <a class="btn btn-white" type="button" onclick="getTopology()"> Get topology.json</a>
+                </div>
+                <div class="row tw-mb-6">
+                    <p>Download the latest logs for the most recent network simulation </p>
+                </div>
+                <div class="row tw-mb-6">
+                    <a class="btn btn-white" type="button" onclick="getLogs()"> Get Logs </a>
                 </div>
             </div>
         </div>

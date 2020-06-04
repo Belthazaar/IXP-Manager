@@ -4,7 +4,7 @@
 function ixpapi(ui, address) {
     this.editorUi = ui;
     this.address = "127.0.0.1:7080";
-    this.api_url = "http://" + this.address + "/api/v4/";
+    this.api_url = window.location.origin + "/api/v4/";
     this.key = "Z0dUeJCUIHXXEhfBpfawY0SYgmTvrcOe23nbBiS6oMBq34E4"; //API key used for testing. To be replaced with var
     this.details = {};
     this.id_to_name = new Object();
@@ -17,7 +17,7 @@ ixpapi.prototype.apiCalls = async function () {
     this.details.switches = {};
     var me = this;
     async function loop(me) {
-        for (var i = 1; i < 4; i++) {
+        for (var i = 1; i < 5; i++) {
             id = await me.getSwitchDetails(i).then(
                 swid => {
                     if(!swid){
@@ -74,7 +74,7 @@ ixpapi.prototype.processSwitch = function (data) {
         swname = sw.name;
         this.id_to_name[id] = sw.name;
         this.details.switches[swname] = sw;
-        this.details.switches[swname] = sw;
+        this.details.switches[swname].swid = id;
         this.details.switches[swname]["interfaces"] = {}
         return id;
     } else {
@@ -204,14 +204,15 @@ ixpapi.prototype.processLayer2Interfaces = async function (data, swname) {
             port.vlans = {};
             for (vlan of iface.vlans) {
                 mac = vlan.macaddresses;
-                ipv4 = [];
-                ipv6 = [];
-                for (v4 of vlan.ipaddresses.ipv4){
-                    ipv4.push(v4);
-                }
-                for (v6 of vlan.ipaddresses.ipv6){
-                    ipv6.push(v6);
-                }
+                ipv4 = vlan.ipaddresses.ipv4
+                ipv6 = vlan.ipaddresses.ipv6
+                // console.log(vlan.ipaddresses)
+                // for (v4 of vlan.ipaddresses.ipv4){
+                //     ipv4.push(v4);
+                // }
+                // for (v6 of vlan.ipaddresses.ipv6){
+                //     ipv6.push(v6);
+                // }
                 port.name = iface["description"];
                 port.vlans[vlan.number] = {
                     "macaddresses": mac,
@@ -270,8 +271,8 @@ ixpapi.prototype.addToSidebar = async function () {
                                     portNode.setAttribute("vlan_private", me.details.vlans[vid].private);
                                     portNode.setAttribute("vlan_description", me.details.vlans[vid].description);
                                     portNode.setAttribute("macaddress", vlan.macaddresses[0]);
-                                    portNode.setAttribute("ipv4_address", vlan.ipv4_addresses[0]);
-                                    portNode.setAttribute("ipv6_address", vlan.ipv6_addresses[0]);
+                                    portNode.setAttribute("ipv4_address", vlan.ipv4_addresses);
+                                    portNode.setAttribute("ipv6_address", vlan.ipv6_addresses);
                                 }
                             }
                             iface.appendChild(portNode);

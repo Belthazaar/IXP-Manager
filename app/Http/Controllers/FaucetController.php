@@ -54,9 +54,9 @@ class FaucetController extends Controller
        return view('faucet/faucet');
    }
 
-   public function toMxGraph(): View
+   public function MxGraph(): View
    {
-       return view('mxgraph');
+       return view('faucet/mxg');
    }
    
    public function generateConfig()
@@ -88,7 +88,6 @@ class FaucetController extends Controller
            throw new ProcessFailedException($process);
        }
        $out = $process->getOutput();
-    //    $out = readfile("/home/ixpman/code/networkTester/output.txt");
        return $out;
    }
 
@@ -110,9 +109,18 @@ class FaucetController extends Controller
        return $out;
    }
 
-   public function testReq( Request $request) {
-    // $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/topology.json");
-    $out = "hello";
+   public function saveFaucet( Request $request) {
+    // AlertContainer::push( "Faucet configuration successfully updated.", Alert::SUCCESS );
+    file_put_contents("/home/ixpman/code/networkTester/etc/faucet/faucet.yaml", ($request->input('msg')));
+    $out = readfile("/home/ixpman/code/networkTester/etc/faucet/faucet.yaml");
+    // $out = $request;
+    return $out;
+   }
+
+   public function saveTopo( Request $request) {
+    file_put_contents("/home/ixpman/code/networkTester/etc/mixtt/topology.json", ($request->input('msg')));
+    $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/topology.json");
+    // $out = $request;
     return $out;
    }
 }

@@ -14,6 +14,8 @@ function Umbrella(editorUi) {
     this.addressToPort = {};
     this.spfGraphing = new spfGraph();
     this.groupID = 0;
+    this.splitChar = ".";
+    this.topology = new Object();
     this.init()
 }
 
@@ -29,7 +31,7 @@ Umbrella.prototype.init = function () {
         var id = node.id;
 
         if (node.hasAttribute('link')) {
-            console.log(id + " is a link node");
+            // console.log(id + " is a link node");
             
             var linkSpeed = node.hasAttribute('speed') ? node.getAttribute('speed') : 10000;
             var link = {
@@ -38,7 +40,7 @@ Umbrella.prototype.init = function () {
             };
             this.links.push(link);
         } else if (node.hasAttribute('switch')) {
-            console.log(id + " is a switch node");
+            // console.log(id + " is a switch node");
             this.processSwitch(node);
         } else {
             console.log(id + " is a rubbish");
@@ -51,21 +53,28 @@ Umbrella.prototype.init = function () {
     }
     this.tidyCoreLinks();
     this.generateACLS();
-    console.log(this.faucetObject);
+    // console.log(this.faucetObject);
     var yamlObj = jsyaml.dump(this.faucetObject);
 
     this.cleanYaml(yamlObj)
-
+    this.topogenerator()
 };
 
 Umbrella.prototype.processSwitch = function (switchNode) {
     var swname = switchNode.getAttribute('switch');
     this.switches.push(swname);
+    // if (!switchNode.hasAttribute('dpid')) {
+    //     console.log("WARN: Switch " + switchNode.getAttribute('name') +
+    //         " is not a OF switch.\n" +
+    //         "No faucet config will be generated for this switch");
+    //     return
+    // }
     if (!switchNode.hasAttribute('dpid')) {
-        console.log("WARN: Switch " + switchNode.getAttribute('name') +
-            " is not a OF switch.\n" +
-            "No faucet config will be generated for this switch");
-        return
+        // console.log("WARN: Switch " + switchNode.getAttribute('name') +
+        //     " is not a OF switch.\n" +
+        //     "No faucet config will be generated for this switch");
+
+        switchNode.setAttribute("dpid", switchNode.getAttribute('swid'))
     }
 
     this.faucetObject.dps[swname] = {};
@@ -79,8 +88,8 @@ Umbrella.prototype.processSwitch = function (switchNode) {
             for (var iface of child.childNodes) {
                 if (iface.nodeName == "iface") {
                     var linkname = iface.getAttribute("name") +
-                        ",Ethernet 1," + swname +
-                        ",Ethernet " + iface.getAttribute('port');
+                        ",port1.0.1," + swname +
+                        ",port " + iface.getAttribute('port');
 
                     var link = {
                         'link': linkname,
@@ -277,9 +286,9 @@ Umbrella.prototype.tidyCoreLinks = function () {
             this.switches.includes(linkNodes[2])) {
 
             var sw1 = linkNodes[0];
-            var sw1Port = linkNodes[1].split(' ')[1];
+            var sw1Port = linkNodes[1].split(this.splitChar)[2];
             var sw2 = linkNodes[2];
-            var sw2Port = linkNodes[3].split(' ')[1];
+            var sw2Port = linkNodes[3].split(this.splitChar)[2];
 
             this.coreLinks[sw1][sw1Port] = this.coreLinks[sw1][sw1Port] || {};
             this.coreLinks[sw1][sw1Port][sw2] = sw2Port;
@@ -384,7 +393,7 @@ Umbrella.prototype.ownIPv6ACL = function (addr, port, acl_num) {
         "rule": {
             "dl_type": "0x86DD",
             "ip_proto": 58,
-            "icmpv6": 135,
+            "icmpv6_type": 135,
             "ipv6_nd_target": String(addr),
             "actions": {
                 "output": {
@@ -436,7 +445,7 @@ Umbrella.prototype.otherIPv6ACL = function (addr, ports, acl_num) {
         "rule": {
             "dl_type": "0x86DD",
             "ip_proto": 58,
-            "icmpv6": 135,
+            "icmpv6_type": 135,
             "ipv6_nd_target": String(addr),
             "actions": {
                 "output": {
@@ -494,7 +503,7 @@ Umbrella.prototype.umbrellaIPv6ACL = function (addr, outPort, acl_num, mac) {
         "rule": {
             "dl_type": "0x86DD",
             "ip_proto": 58,
-            "icmpv6": 135,
+            "icmpv6_type": 135,
             "ipv6_nd_target": String(addr),
             "actions": {
                 "output": {
@@ -548,17 +557,6 @@ Umbrella.prototype.portToMacACL = function (addr, port, acl_num) {
 };
 
 
-Umbrella.prototype.saveYaml = function(yamlObj){
-    var uriContent = "data:application/txt;charset=utf-8," + encodeURIComponent(yamlObj);
-    var downloadLink = document.createElement('a');
-    downloadLink.href = uriContent;
-    downloadLink.download = "faucet.yaml";
-
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-    document.body.removeChild(downloadLink);
-};
-
 
 Umbrella.prototype.cleanYaml = async function(yamlObj){
     var ports = new Set();
@@ -576,7 +574,7 @@ Umbrella.prototype.cleanYaml = async function(yamlObj){
             return result;
         }
     )
-    console.log(cleanYaml);
+    // console.log(cleanYaml);
     this.saveYaml(cleanYaml);
 }
 
@@ -590,6 +588,111 @@ Umbrella.prototype.removeQuotesFromKeys = function(ports, yamlDirty){
         resolve(result);
     });
 }
+
+Umbrella.prototype.topogenerator = function(){
+    var host_matrix = new Object();
+    var ipv4 = "127.0.0.1/8"
+    var ipv6 = "::1'/128"
+    var mac = "00:00:00:00:00:01"
+    this.topology.hosts_matrix = []
+    this.topology.switch_matrix = {}
+    this.topology.switch_matrix.dp_ids = {}
+    this.topology.switch_matrix.links = []
+    // console.log("topo faucet obj")
+    // console.log(this.faucetObject)
+    for (sw of Object.entries(this.addressToPort)) {
+        host_matrix = {};
+        if (!sw) {
+            continue
+        }
+        var seen_ports = []
+        sw_name = sw[0]
+        // console.log("sw_name");
+        // console.log(sw_name);
+        // console.log(sw);
+        for ([addr, details] of Object.entries(sw[1])){
+            var raw_port = this.faucetObject.dps[sw_name]['interfaces'][details.port]["name"];
+            var clean_port = raw_port.replace(/[\W_]+/g,"");
+            var short_p = clean_port.substring(0,8);
+            if (!seen_ports.includes(short_p)){
+                host_matrix[short_p] = {};
+                host_matrix[short_p].ipv4 = null;
+                host_matrix[short_p].ipv6 = null;
+                host_matrix[short_p].mac = null;
+                host_matrix[short_p].portnum = details.port;
+                seen_ports.push(short_p)
+            }
+            switch (details.addr_type) {
+                case "ipv4":
+                    host_matrix[short_p].ipv4 = addr + "/8";
+                    break;
+                case "ipv6":
+                    host_matrix[short_p].ipv6 = addr + "/48";
+                    break;
+                case "mac":
+                    host_matrix[short_p].mac = addr;
+                    break;
+            
+            }
+        }
+        clean_sw = sw_name.replace(/[\W_]+/g,"");
+        trunc_sw = clean_sw.substring(0,8);
+        // console.log(host_matrix);
+        for (var p of seen_ports) {
+            this.topology.hosts_matrix.push([p, host_matrix[p].ipv4, host_matrix[p].ipv6, 
+                host_matrix[p].mac, trunc_sw, host_matrix[p].portnum])
+        }
+        this.topology.switch_matrix.dp_ids[trunc_sw] = this.faucetObject.dps[sw_name].dp_id;
+    }
+    for (var link of this.links) {
+        var linkNodes = link['link'].split(',');
+        if (this.switches.includes(linkNodes[0]) &&
+            this.switches.includes(linkNodes[2])) {
+
+            var sw1 = linkNodes[0];
+            var sw1Port = linkNodes[1].split(this.splitChar)[2];
+            var sw2 = linkNodes[2];
+            var sw2Port = linkNodes[3].split(this.splitChar)[2];
+            this.topology.switch_matrix.links.push([sw1, sw1Port, sw2, sw2Port])
+        }
+    }
+    // console.log(this.topology);
+    this.saveTopo(this.topology);
+}
+
+Umbrella.prototype.saveYaml = function(yamlObj){
+    let phpurl = window.location.origin + "/faucet/saveFaucet";
+    var d = String(yamlObj)
+    $.ajax({
+        url: phpurl,
+        type: "POST",
+        data: {"msg": d},
+    }).done(function(msg){
+        console.log("save faucet success")
+        console.log(msg)
+        alert("faucet config generated successfully. Save to run network tester")
+    })
+    .fail(function(){
+        console.log("something went wrong in saving faucet")
+    })
+};
+
+Umbrella.prototype.saveTopo = function(topo){
+    let phpurl = window.location.origin + "/faucet/saveTopo";
+    d = JSON.stringify(topo);
+    dstring = String(d);
+    $.ajax({
+        url: phpurl,
+        type: "POST",
+        data: {"msg": dstring}
+    }).done(function(msg){
+        console.log("save topo success")
+        console.log(msg)
+    })
+    .fail(function(){
+        console.log("something went wrong in saving topo")
+    })
+};
 
 
 class spfGraph {
