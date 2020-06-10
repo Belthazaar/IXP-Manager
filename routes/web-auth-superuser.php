@@ -242,6 +242,15 @@ Route::group( [ 'prefix' => 'utils' ], function() {
 
 });
 
-
+Route::group( [ 'prefix' => 'faucet' ], function() {
+    Route::get(     '',                                 'FaucetController@index'                        )->name( 'faucet@index' );
+    Route::get(     'generateConfig',                   'FaucetController@generateConfig'               )->name( 'faucet@generateConfig' );
+    Route::get(     'getFaucetYaml',                    'FaucetController@getFaucetYaml'                )->name( 'faucet@getFaucetYaml' );
+    Route::get(     'getTopologyJson',                  'FaucetController@getTopologyJson'              )->name( 'faucet@getTopologyJson' );
+    Route::get(     'getLatestLogs',                    'FaucetController@getLatestLogs'                )->name( 'faucet@getLatestLogs' );
+    Route::get(     'MxGraph',                          'FaucetController@MxGraph'                      )->name( 'faucet@MxGraph' );
+    Route::post(     'saveFaucet',                      'FaucetController@saveFaucet'                   )->name( 'faucet@saveFaucet' );
+    Route::post(     'saveTopo',                        'FaucetController@saveTopo'                     )->name( 'faucet@saveTopo' );
+});
 
 
