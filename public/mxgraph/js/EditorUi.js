@@ -54,6 +54,7 @@ EditorUi = function(editor, container, lightbox)
 	this.createDivs();
 	this.createUi();
 	this.refresh();
+	new ixpapi(this);
 
 	// Disables HTML and text selection
 	var textEditing =  mxUtils.bind(this, function(evt)
