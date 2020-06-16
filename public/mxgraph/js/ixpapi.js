@@ -9,7 +9,6 @@ function ixpapi(ui) {
     this.id_to_name = new Object();
     this.splitChar = ".";
     this.xmlSwitches = [];
-    this.apiCalls();
 };
 
 ixpapi.prototype.apiCalls = async function () {
@@ -26,7 +25,6 @@ ixpapi.prototype.apiCalls = async function () {
                     return swid;
                 }
             );
-            console.log(id);
             if(id){
                 await Promise.all([me.getVlans(id), me.getPorts(id, swname), me.getLayer2Interfaces(id, swname)])
             }
@@ -51,7 +49,9 @@ ixpapi.prototype.getSwitchDetails = function (id) {
             if (request.status == 404) {
                 resolve(null);
             }
-            resolve(this.processSwitch(request.response));
+            else {
+                resolve(this.processSwitch(request.response));
+            }
 
         }
         request.onerror = function () {
@@ -84,7 +84,6 @@ ixpapi.prototype.processSwitch = function (data) {
 
 ixpapi.prototype.getVlans = function (id) {
     var request = new XMLHttpRequest();
-    console.log("Before promise for vlan for "+ id)
     return new Promise((resolve, reject) => {
         request.open('GET',
             this.api_url + "provisioner/vlans/switch-id/" + id + ".json?apikey=" +
@@ -146,7 +145,7 @@ ixpapi.prototype.getPorts = function (id, swname) {
 
 ixpapi.prototype.processPorts = function (data, swname) {
     parsed = JSON.parse(data);
-    for (port in parsed.switchports) {
+    for (port of parsed.switchports) {
         if (port.sp_type_name == "Core") {
             port_name = Number((port.sp_ifName).split(this.splitChar)[2]);
             this.details.switches[swname].interfaces[port_name] = {
@@ -156,13 +155,13 @@ ixpapi.prototype.processPorts = function (data, swname) {
             };
             continue
         }
-        if (port.sp_type_name == "Unset") {
-            port_name = Number((port.sp_ifName).split(this.splitChar)[2]);
-            this.details.switches[swname].interfaces[port_name] = {
-                "name": port.sp_name,
-                "configured": false
-            };
-        }
+        // if (port.sp_type_name == "Unset") {
+        //     port_name = Number((port.sp_ifName).split(this.splitChar)[2]);
+        //     this.details.switches[swname].interfaces[port_name] = {
+        //         "name": port.sp_name,
+        //         "configured": false
+        //     };
+        // }
     }
     return;
 };
@@ -192,7 +191,6 @@ ixpapi.prototype.getLayer2Interfaces = async function (id, swname) {
 
 ixpapi.prototype.processLayer2Interfaces = async function (data, swname) {
     parsed = JSON.parse(data);
-    console.log(swname)
     for (iface of parsed.layer2interfaces) {
         port_name = Number((iface.name).split(this.splitChar)[2]);
         if (port_name) {
@@ -205,13 +203,6 @@ ixpapi.prototype.processLayer2Interfaces = async function (data, swname) {
                 mac = vlan.macaddresses;
                 ipv4 = vlan.ipaddresses.ipv4
                 ipv6 = vlan.ipaddresses.ipv6
-                // console.log(vlan.ipaddresses)
-                // for (v4 of vlan.ipaddresses.ipv4){
-                //     ipv4.push(v4);
-                // }
-                // for (v6 of vlan.ipaddresses.ipv6){
-                //     ipv6.push(v6);
-                // }
                 port.name = iface["description"];
                 port.vlans[vlan.number] = {
                     "macaddresses": mac,
@@ -221,7 +212,6 @@ ixpapi.prototype.processLayer2Interfaces = async function (data, swname) {
             }
         }
     }
-    console.log(this.details)
     return
 };
 
@@ -274,6 +264,9 @@ ixpapi.prototype.addToSidebar = async function () {
                                     portNode.setAttribute("ipv6_address", vlan.ipv6_addresses);
                                 }
                             }
+                            if (!values.hasOwnProperty('vlans')) {
+                                portNode.setAttribute("Core", "true")
+                            }
                             iface.appendChild(portNode);
                         }
                     }
@@ -281,6 +274,7 @@ ixpapi.prototype.addToSidebar = async function () {
                     switchNode.appendChild(iface);
                 } else if (attr === "name") {
                     switchNode.setAttribute("switch", val);
+                    switchNode.setAttribute('label', val);
                 } else {
                     switchNode.setAttribute(attr, val);
                 }

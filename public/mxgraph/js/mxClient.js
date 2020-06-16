@@ -745,6 +745,7 @@ if (mxForceIncludes || !(typeof module === 'object' && module.exports != null))
 	mxClient.include(mxClient.basePath+'/js/handler/mxSelectionCellsHandler.js');
 	mxClient.include(mxClient.basePath+'/js/handler/mxConnectionHandler.js');
 	mxClient.include(mxClient.basePath+'/js/handler/mxConstraintHandler.js');
+	mxClient.include(mxClient.basePath+'/js/handler/mxSwitchConnectionHandler.js');
 	mxClient.include(mxClient.basePath+'/js/handler/mxRubberband.js');
 	mxClient.include(mxClient.basePath+'/js/handler/mxHandle.js');
 	mxClient.include(mxClient.basePath+'/js/handler/mxVertexHandler.js');
