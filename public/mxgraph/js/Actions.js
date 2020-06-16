@@ -84,6 +84,7 @@ Actions.prototype.init = function()
 	this.addAction('connectixp', function() {new ixpapi(ui)});
 	this.addAction('umbrella', function() {new Umbrella(ui)});
 	this.addAction('tester', function() {new docker(ui)});
+
 	this.addAction('preview', function() { mxUtils.show(graph, null, 10, 10); });
 
 	// Edit actions

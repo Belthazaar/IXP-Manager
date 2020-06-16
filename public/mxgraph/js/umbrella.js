@@ -87,10 +87,12 @@ Umbrella.prototype.processSwitch = function (switchNode) {
         if (child.localName == "interfaces") {
             for (var iface of child.childNodes) {
                 if (iface.nodeName == "iface") {
+
                     if (iface.hasAttribute('Core')){
                         // console.log(`Skipping core port specified on switch`);
                         continue;
                     }
+
                     var linkname = iface.getAttribute("name") +
                         ",port1.0.1," + swname +
                         ",port " + iface.getAttribute('port');

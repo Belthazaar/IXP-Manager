@@ -442,6 +442,12 @@
             </li>
 
 
+            <li class="<?= !request()->is( 'utils/faucet' ) ?: 'active' ?>">
+                <a href="<?= route( 'faucet@index' ) ?>" class="nav-link">
+                    Faucet
+                </a>
+            </li>
+
         </ul>
     </div>
 </nav>
