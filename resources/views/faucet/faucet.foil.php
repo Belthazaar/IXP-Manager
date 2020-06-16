@@ -59,4 +59,6 @@ Faucet Configuration Generator
 
 <script type="text/javascript" src="js/faucet.js"></script>
 
-<?php $this->append() ?>
+
+<?php $this->append() ?> 
+

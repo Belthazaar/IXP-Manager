@@ -2024,9 +2024,24 @@ mxConnectionHandler.prototype.connect = function(source, target, evt, dropTarget
 					pt.y -= this.graph.panDy / this.graph.view.scale;
 					geo.setTerminalPoint(pt, false);
 				}
-				
+
+				if (target != null)
+				{
+					mxs = new mxSwitchConnectionHandler(this.graph);
+					var match = mxs.addConnection(source, target);
+
+					for (c of model.getChildCells(parent)){
+						if (!c.value){
+							var doc = mxUtils.createXmlDocument();
+  							var node = doc.createElement('link')
+							node.setAttribute('link', match);
+							node.setAttribute('label', match);
+							c.setValue(node);
+						}
+					}
+				}
 				this.fireEvent(new mxEventObject(mxEvent.CONNECT, 'cell', edge, 'terminal', target,
-					'event', evt, 'target', dropTarget, 'terminalInserted', terminalInserted));
+								'event', evt, 'target', dropTarget, 'terminalInserted', terminalInserted));	
 			}
 		}
 		catch (e)
