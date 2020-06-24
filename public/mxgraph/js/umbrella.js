@@ -79,6 +79,8 @@ Umbrella.prototype.processSwitch = function (switchNode) {
 
     this.faucetObject.dps[swname] = {};
     this.faucetObject.dps[swname].dp_id = parseInt(switchNode.getAttribute('dpid'), 10);
+    var aclNum = parseInt(switchNode.getAttribute('dpid'), 10);
+    this.faucetObject.acls[aclNum] = [];
     this.faucetObject.dps[swname].hardware = switchNode.getAttribute('hardware');
     this.faucetObject.dps[swname]['interfaces'] = {};
     this.addressToPort[swname] = {};
@@ -156,9 +158,8 @@ Umbrella.prototype.SPFOrganise = function () {
 Umbrella.prototype.generateACLS = function () {
     for (var sw of Object.entries(this.addressToPort)) {
         var swName = sw[0];
-        var aclNum = this.faucetObject.dps[swName]['dp_id'];
-        this.faucetObject.acls[aclNum] = [];
         this.groupID = Math.ceil(this.groupID / 1000) * 1000;
+        var aclNum = this.faucetObject.dps[swName]['dp_id'];
         for ([addr, details] of Object.entries(sw[1])) {
             switch (details.addr_type) {
                 case "ipv4":
@@ -180,8 +181,7 @@ Umbrella.prototype.generateACLS = function () {
             }
             for ([addr, details] of Object.entries(otherSW[1])) {
                 var route = this.djikistra(this.spfGraphing, swName, details.name);
-
-                if (route.length <= 3) {
+                if (route.length < 4) {
                     var ports = [];
                     var otherPorts = [];
                     for (var [port, entry] of Object.entries(this.coreLinks[swName])) {
@@ -220,14 +220,12 @@ Umbrella.prototype.umbrellaACL = function (addr, addr_type, aclNum, route, sw) {
     var outPort = 0;
     var ports = [];
     var prevHop = "";
-
-
     for (var hop of route) {
         if (hop == sw) {
             prevHop = hop;
             continue;
         }
-        if (hop == route[-1]) {
+        if (hop == route[route.length -1]) {
             var lastPort = this.addressToPort[prevHop][addr].port;
             ports.push(lastPort);
             continue;
@@ -238,42 +236,59 @@ Umbrella.prototype.umbrellaACL = function (addr, addr_type, aclNum, route, sw) {
                     if (prevHop == sw) {
                         outPort = port;
                     } else {
-                        ports.push(port)
+                        ports.push(port);
                     }
                 }
             }
         }
         prevHop = hop;
     }
-
-    for (var i = ports.length; i < 6; i++){
-        ports.push(0)
-    }
-
-    var mac = "";
-    count = 1;
-    for (var port of ports) {
-        var portStr = port.toString(16);
-        if (portStr.length == 1) {
-            portStr = "0" + portStr;
+    var route_len = route.length - 2;
+    var hop_count = 0;
+    var last_mac = ""
+    while (hop_count < route_len) {
+        for (var i = ports.length; i < 6; i++){
+            ports.push(0)
         }
-        mac += portStr;
-        if (count < ports.length) {
-            mac += ":"
-            count++;
+
+        var mac = "";
+        count = 1;
+        for (var port of ports) {
+            var portStr = port.toString(16);
+            if (portStr.length == 1) {
+                portStr = "0" + portStr;
+            }
+            mac += portStr;
+            if (count < ports.length) {
+                mac += ":"
+                count++;
+            }
         }
-    }
-    outPort = parseInt(outPort, 10);
-    switch (addr_type) {
-        case "ipv4":
-            this.umbrellaIPv4ACL(addr, outPort, aclNum, mac);
-            break;
-        case "ipv6":
-            this.umbrellaIPv6ACL(addr, outPort, aclNum, mac);
-            break;
-        case "mac":
-            this.umbrellaMacACL(addr, outPort, aclNum, mac);
-            break;
+        outPort = parseInt(outPort, 10);
+        if (hop_count == 0) {
+            switch (addr_type) {
+                case "ipv4":
+                    this.umbrellaIPv4ACL(addr, outPort, aclNum, mac);
+                    break;
+                case "ipv6":
+                    this.umbrellaIPv6ACL(addr, outPort, aclNum, mac);
+                    break;
+                case "mac":
+                    this.umbrellaMacACL(addr, outPort, aclNum, mac);
+                    break;
+            }
+            last_mac = mac;
+            outPort = ports.shift();
+            hop_count+=1;
+        } else {
+            var tempsw = route[hop_count];
+            var tempacl = this.faucetObject.dps[tempsw]['dp_id'];
+            this.umbrellaMacACL(last_mac, outPort, tempacl, mac);
+            ports.shift();
+            last_mac = mac;
+            outPort = ports[0];
+            hop_count+=1;
+        }
     }
 }
 
