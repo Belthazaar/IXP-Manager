@@ -94,52 +94,74 @@ Umbrella.prototype.processSwitch = function (switchNode) {
                         // console.log(`Skipping core port specified on switch`);
                         continue;
                     }
-
-                    var linkname = iface.getAttribute("name") +
-                        ",port1.0.1," + swname +
-                        ",port " + iface.getAttribute('port');
+                    var port = Number(iface.getAttribute('port'));
+                    var pname = iface.getAttribute("name");
+                    var linkname =  pname + ",port1.0.1," + swname +
+                                    ",port " + port;
 
                     var link = {
                         'link': linkname,
                         'speed': iface.getAttribute('speed')
                     };
 
-                    this.links.push(link);
-                    var port = Number(iface.getAttribute('port'))
+                    this.links.push(link);     
+                    var tagged_vlans = []
+                    var native_vlan = null;
+                    for (var vlan of iface.children){
+                        var vid = parseInt(vlan.getAttribute('vid'),10);
+                        var ipv4 = vlan.getAttribute('ipv4_address');
+                        this.addressToPort[swname][ipv4] = {
+                            'port': port,
+                            'addr_type': 'ipv4',
+                            'name': pname
+                        }
+
+                        var ipv6 = vlan.getAttribute('ipv6_address');
+                        if (ipv6 != 'undefined') {
+                            this.addressToPort[swname][ipv6] = {
+                                'port': port,
+                                'addr_type': 'ipv6',
+                                'name': pname
+                            }
+                        }
+
+                        var mac = vlan.getAttribute('macaddresses');
+                        this.addressToPort[swname][mac] = {
+                            'port': port,
+                            'addr_type': 'mac',
+                            'name': pname
+                        }
+                        console.log(iface)
+                        if (iface.getAttribute("tagged") == "true"){
+                            tagged_vlans.push(vid);
+                            this.addressToPort[swname][mac].vlan = vid;
+                            this.addressToPort[swname][ipv4].vlan = vid;
+                            this.addressToPort[swname][ipv6].vlan = vid;
+                        } else {
+                            native_vlan = vid
+                        }
+
+                        if (!this.faucetObject.vlans.hasOwnProperty(vlan.getAttribute('vlan_name'))) {
+                            this.faucetObject.vlans[vlan.getAttribute('vlan_name')] = {
+                                'vid': vid,
+                                'description': vlan.getAttribute('vlan_description'),
+                            }
+                        }
+
+                        console.log(`Printing info for port: ${pname}`)
+                        console.log(`vlan: ${vid}\t mac: ${mac}\t ipv4: ${ipv4}\t ipv6: ${ipv6} `)
+
+                    }
                     this.faucetObject.dps[swname]['interfaces'][port] = {
-                        'name': iface.getAttribute('name'),
-                        'native_vlan': parseInt(iface.getAttribute('vlan'), 10),
+                        'name': pname,
                         'acl_in': parseInt(switchNode.getAttribute('dpid'), 10)
                     }
-                    if (!this.faucetObject.vlans.hasOwnProperty(iface.getAttribute('vlan_name'))) {
-                        this.faucetObject.vlans[iface.getAttribute('vlan_name')] = {
-                            'vid': parseInt(iface.getAttribute('vlan'), 10),
-                            'description': iface.getAttribute('vlan_description'),
-                        }
+                    if (native_vlan){
+                        this.faucetObject.dps[swname]['interfaces'][port].native_vlan = native_vlan;
                     }
-                    var ipv4 = iface.getAttribute('ipv4_address');
-                    this.addressToPort[swname][ipv4] = {
-                        'port': parseInt(iface.getAttribute('port')),
-                        'addr_type': 'ipv4',
-                        'name': iface.getAttribute('name')
+                    if (tagged_vlans.length > 0){
+                        this.faucetObject.dps[swname]['interfaces'][port].tagged_vlans = tagged_vlans;
                     }
-
-                    var ipv6 = iface.getAttribute('ipv6_address');
-                    if (ipv6 != 'undefined') {
-                        this.addressToPort[swname][ipv6] = {
-                            'port': parseInt(iface.getAttribute('port')),
-                            'addr_type': 'ipv6',
-                            'name': iface.getAttribute('name')
-                        }
-                    }
-
-                    var mac = iface.getAttribute('macaddress');
-                    this.addressToPort[swname][mac] = {
-                        'port': parseInt(iface.getAttribute('port')),
-                        'addr_type': 'mac',
-                        'name': iface.getAttribute('name')
-                    }
-
                 }
             }
         }
@@ -619,51 +641,77 @@ Umbrella.prototype.topogenerator = function(){
     this.topology.switch_matrix = {}
     this.topology.switch_matrix.dp_ids = {}
     this.topology.switch_matrix.links = []
-    // console.log("topo faucet obj")
-    // console.log(this.faucetObject)
+    var host_matrix = {};
+    var seen_ports = []
     for (sw of Object.entries(this.addressToPort)) {
-        host_matrix = {};
         if (!sw) {
             continue
         }
-        var seen_ports = []
         sw_name = sw[0]
-        // console.log("sw_name");
-        // console.log(sw_name);
-        // console.log(sw);
+        clean_sw = sw_name.replace(/[\W_]+/g,"");
+        trunc_sw = clean_sw.substring(0,8);
         for ([addr, details] of Object.entries(sw[1])){
             var raw_port = this.faucetObject.dps[sw_name]['interfaces'][details.port]["name"];
             var clean_port = raw_port.replace(/[\W_]+/g,"");
             var short_p = clean_port.substring(0,8);
             if (!seen_ports.includes(short_p)){
-                host_matrix[short_p] = {};
-                host_matrix[short_p].ipv4 = null;
-                host_matrix[short_p].ipv6 = null;
-                host_matrix[short_p].mac = null;
-                host_matrix[short_p].portnum = details.port;
-                seen_ports.push(short_p)
+                host_matrix[short_p] = host_matrix[short_p] || {};
+                seen_ports.push(short_p);
             }
+            host_matrix[short_p][trunc_sw] = host_matrix[short_p][trunc_sw] || {}
+            var vid = null;
+            if (details.vlan){
+                vid = details.vlan;
+            }
+            vid = vid || 0;
+            host_matrix[short_p][trunc_sw][vid] = host_matrix[short_p][trunc_sw][vid] || {};
+            host_matrix[short_p][trunc_sw][vid].vid = host_matrix[short_p][trunc_sw][vid].vid || vid;
+            host_matrix[short_p][trunc_sw][vid].switch =  host_matrix[short_p][trunc_sw][vid].switch || trunc_sw;
+            host_matrix[short_p][trunc_sw][vid].port = details.port;
             switch (details.addr_type) {
                 case "ipv4":
-                    host_matrix[short_p].ipv4 = addr + "/8";
+                    host_matrix[short_p][trunc_sw][vid].ipv4 = addr + "/24";
                     break;
                 case "ipv6":
-                    host_matrix[short_p].ipv6 = addr + "/48";
+                    host_matrix[short_p][trunc_sw][vid].ipv6 = addr + "/24";
                     break;
                 case "mac":
-                    host_matrix[short_p].mac = addr;
+                    host_matrix[short_p][trunc_sw][vid].mac = addr;
                     break;
-            
             }
         }
-        clean_sw = sw_name.replace(/[\W_]+/g,"");
-        trunc_sw = clean_sw.substring(0,8);
-        // console.log(host_matrix);
-        for (var p of seen_ports) {
-            this.topology.hosts_matrix.push([p, host_matrix[p].ipv4, host_matrix[p].ipv6, 
-                host_matrix[p].mac, trunc_sw, host_matrix[p].portnum])
-        }
         this.topology.switch_matrix.dp_ids[trunc_sw] = this.faucetObject.dps[sw_name].dp_id;
+    }
+    for (var p of seen_ports) {
+        var host  = new Object()
+        host.name = p
+        host.interfaces = []
+        console.log(host_matrix)
+        for ([sw, swdet] of Object.entries(host_matrix[p])) {
+            console.log(`Printing sw`);
+            console.log(sw);
+            for ([vid, details] of Object.entries(swdet)){
+                console.log(`Printing vid and details`);
+                console.log(vid);
+                console.log(details);
+                var iface = new Object();
+                if (vid != 0){
+                    iface.vlan = vid
+                }
+                if (details.ipv4){
+                    iface.ipv4 = details.ipv4;
+                }
+                if (details.ipv6){
+                    iface.ipv6 = details.ipv6;
+                }
+                iface.mac = details.mac;
+                iface.swport = details.port;
+                iface.switch = details.switch;
+
+                host.interfaces.push(iface);
+            }
+        }
+        this.topology.hosts_matrix.push(host);
     }
     for (var link of this.links) {
         var linkNodes = link['link'].split(',');
@@ -677,8 +725,8 @@ Umbrella.prototype.topogenerator = function(){
             this.topology.switch_matrix.links.push([sw1, sw1Port, sw2, sw2Port])
         }
     }
-    // console.log(this.topology);
     this.saveTopo(this.topology);
+    this.saveXml();
 }
 
 Umbrella.prototype.saveYaml = function(yamlObj){
@@ -693,8 +741,9 @@ Umbrella.prototype.saveYaml = function(yamlObj){
         console.log(msg)
         alert("faucet config generated successfully. Saved to the push-on-green module")
     })
-    .fail(function(){
+    .fail(function(msg){
         console.log("something went wrong in saving faucet")
+        console.log(msg)
     })
 };
 
@@ -710,10 +759,29 @@ Umbrella.prototype.saveTopo = function(topo){
         console.log("save topo success")
         console.log(msg)
     })
-    .fail(function(){
+    .fail(function(msg){
         console.log("something went wrong in saving topo")
+        console.log(msg)
     })
 };
+
+Umbrella.prototype.saveXml = function(){
+    xmlfile = mxUtils.getPrettyXml(this.editorUi.editor.getGraphXml());
+    let phpurl = window.location.origin + "/faucet/saveXML";
+    dstring = String(xmlfile);
+    $.ajax({
+        url: phpurl,
+        type: "POST",
+        data: {"msg": dstring}
+    }).done(function(msg){
+        console.log("save XML success")
+        console.log(msg)
+    })
+    .fail(function(msg){
+        console.log("something went wrong in saving topo")
+        console.log(msg)
+    })
+}
 
 
 class spfGraph {

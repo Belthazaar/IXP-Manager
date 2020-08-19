@@ -204,6 +204,7 @@ ixpapi.prototype.processLayer2Interfaces = async function (data, swname) {
             this.details.switches[swname].interfaces[port_name] = {}
             var port = this.details.switches[swname].interfaces[port_name];
             port.speed = iface.speed;
+            port.tagged = iface.dot1q;
             port.configure = true;
             port.vlans = {};
             for (vlan of iface.vlans) {
@@ -261,17 +262,26 @@ ixpapi.prototype.addToSidebar = async function () {
                             swi.links.push(links);
                             portNode.setAttribute("name", values.name);
                             portNode.setAttribute("port", port);
+                            portNode.setAttribute("tagged", values.tagged)
                             portNode.setAttribute("speed", values.speed);
                             if (values.hasOwnProperty('vlans')) {
+                                var count = 0;
                                 for (var [vid, vlan] of Object.entries(values.vlans)) {
-                                    portNode["vlan"] = vid;
-                                    portNode.setAttribute("vlan", vid);
-                                    portNode.setAttribute("vlan_name", me.details.vlans[vid].name);
-                                    portNode.setAttribute("vlan_private", me.details.vlans[vid].private);
-                                    portNode.setAttribute("vlan_description", me.details.vlans[vid].description);
-                                    portNode.setAttribute("macaddress", vlan.macaddresses[0]);
-                                    portNode.setAttribute("ipv4_address", vlan.ipv4_addresses);
-                                    portNode.setAttribute("ipv6_address", vlan.ipv6_addresses);
+                                    var vlanObj = doc.createElement("vlan");
+                                    vlanObj.setAttribute(`vid`, vid);
+                                    vlanObj.setAttribute(`vlan_name`, 
+                                            me.details.vlans[vid].name);
+                                    vlanObj.setAttribute("vlan_private", 
+                                            me.details.vlans[vid].private);
+                                    vlanObj.setAttribute("vlan_description", 
+                                            me.details.vlans[vid].description);
+                                    vlanObj.setAttribute("macaddresses", 
+                                            vlan.macaddresses[0]);
+                                    vlanObj.setAttribute("ipv4_address", 
+                                            vlan.ipv4_addresses);
+                                    vlanObj.setAttribute("ipv6_address", 
+                                            vlan.ipv6_addresses);
+                                    portNode.appendChild(vlanObj)
                                 }
                             }
 
@@ -297,7 +307,8 @@ ixpapi.prototype.addToSidebar = async function () {
         await proc(me);
         var style = "rounded=0;whiteSpace=wrap;html=1;";
         swi.id = id;
-        this.xmlSwitches.push(SB.createVertexTemplateEntry(style, width, height, switchNode, swi.name, null, null, 'rect rectangle box'))
+        this.xmlSwitches.push(SB.createVertexTemplateEntry(style, width, height, 
+                        switchNode, swi.name, null, null, 'rect rectangle box'))
 
         switches.push(swi);
     }
@@ -305,3 +316,28 @@ ixpapi.prototype.addToSidebar = async function () {
     var expand = true;
     SB.addPaletteFunctions('Switches', 'Switches', (expand != null) ? expand : true, this.xmlSwitches);
 };
+
+ixpapi.prototype.getXML = function(editor){
+    let phpurl = window.location.origin + "/faucet/getXML"
+    var request = new XMLHttpRequest();
+    request.open('GET', phpurl, true);
+    request.setRequestHeader('Access-Control-Allow-Origin', '*');
+    request.setRequestHeader('Content-Type', 'application/json');
+    request.send();
+    request.onload = () => {
+        if (request.status == 404){
+            console.log("error url not found");
+            return null;
+        }
+        else {
+            try{
+                var doc = mxUtils.parseXml(request.response);
+		        editor.graph.setSelectionCells(editor.graph.importGraphModel(doc.documentElement));
+            }
+            catch{
+                console.log("Error in graph xml, or no graph xml detected");
+            }
+        }
+
+    }
+}

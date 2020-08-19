@@ -47,6 +47,12 @@ Faucet Configuration Generator
                 <div class="row tw-mb-6">
                     <a class="btn btn-white" type="button" onclick="getLogs()"> Get Logs </a>
                 </div>
+                <div class="row tw-mb-6">
+                    <p>Download the graph XML config for the most recent network simulation </p>
+                </div>
+                <div class="row tw-mb-6">
+                    <a class="btn btn-white" type="button" onclick="getXML()"> Get graph xml </a>
+                </div>
             </div>
         </div>
     </div>

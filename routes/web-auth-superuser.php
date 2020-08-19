@@ -249,8 +249,10 @@ Route::group( [ 'prefix' => 'faucet' ], function() {
     Route::get(     'getTopologyJson',                  'FaucetController@getTopologyJson'              )->name( 'faucet@getTopologyJson' );
     Route::get(     'getLatestLogs',                    'FaucetController@getLatestLogs'                )->name( 'faucet@getLatestLogs' );
     Route::get(     'MxGraph',                          'FaucetController@MxGraph'                      )->name( 'faucet@MxGraph' );
-    Route::post(     'saveFaucet',                      'FaucetController@saveFaucet'                   )->name( 'faucet@saveFaucet' );
-    Route::post(     'saveTopo',                        'FaucetController@saveTopo'                     )->name( 'faucet@saveTopo' );
+    Route::get(     'getXML',                           'FaucetController@getXML'                       )->name( 'faucet@getXML' );
+    Route::post(    'saveXML',                          'FaucetController@saveXML'                      )->name( 'faucet@saveXML' );
+    Route::post(    'saveFaucet',                       'FaucetController@saveFaucet'                   )->name( 'faucet@saveFaucet' );
+    Route::post(    'saveTopo',                         'FaucetController@saveTopo'                     )->name( 'faucet@saveTopo' );
 });
 
 

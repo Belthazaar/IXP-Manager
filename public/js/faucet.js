@@ -99,6 +99,25 @@ function getLogs() {
         })
 }
 
+
+function getXML() {
+    let url = encodeURI("faucet/getXML");
+    console.log(url);
+
+    $.ajax(url)
+        .done(function (data) {
+            var a = document.createElement("a");
+            var file = new Blob([data], {type: 'text/plain'});
+            a.href = URL.createObjectURL(file);
+            a.download = 'graph.xml';
+            a.click();
+            
+        })
+        .fail(function (){
+            alert("Something went wrong");
+        })
+}
+
 function openMxGraph() {
     let url= window.location.origin + "/mxgraph";
     window.open(url, "_self");

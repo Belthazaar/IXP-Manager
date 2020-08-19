@@ -57,6 +57,7 @@ EditorUi = function(editor, container, lightbox)
 	this.ixp = new ixpapi(this);
 	this.ixp.apiCalls();
 
+	xml = this.ixp.getXML(editor);
 
 	// Disables HTML and text selection
 	var textEditing =  mxUtils.bind(this, function(evt)
@@ -2280,7 +2281,6 @@ EditorUi.prototype.open = function()
 				try
 				{
 					if (filename.includes(".yaml")){
-						alert("The real treasure was inside you all along")
 						var doc = mxUtils.parseYaml(xml);
 					}
 					else{

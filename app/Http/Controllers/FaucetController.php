@@ -93,20 +93,44 @@ class FaucetController extends Controller
 
    public function getFaucetYaml()
    {
-       $out = readfile("/home/ixpman/code/networkTester/etc/faucet/faucet.yaml");
+       $fpath = "/home/ixpman/code/networkTester/etc/faucet/faucet.yaml";
+    //    $out = readfile("/home/ixpman/code/networkTester/etc/faucet/faucet.yaml");
+        $file = fopen($fpath, "r");
+        $out = fread($file, filesize($fpath));
+        fclose($file);
        return $out;
    }
 
    public function getTopologyJson()
    {
-       $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/topology.json");
+       $fpath = "/home/ixpman/code/networkTester/etc/mixtt/topology.json";
+       $file = fopen($fpath, "r");
+       $out = fread($file, filesize($fpath));
+       fclose($file);
+
+    //    $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/topology.json");
        return $out;
+   }
+
+   public function getXML()
+   {
+       $fpath = "/home/ixpman/code/networkTester/etc/mixtt/graph.xml";
+       $file = fopen($fpath, "r") or die("Unable to open the file");
+       $out = fread($file,filesize($fpath));
+       fclose($file);
+       return $out;
+    //    $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/topology.json");
+    //    return $out;
    }
 
    public function getLatestLogs()
    {
-       $out = readfile("/home/ixpman/code/networkTester/ixpman_files/output.txt");
-       return $out;
+    //    $out = readfile("/home/ixpman/code/networkTester/ixpman_files/output.txt");
+        $fpath = "/home/ixpman/code/networkTester/ixpman_files/output.txt";
+        $file = fopen($fpath, "r");
+        $out = fread($file,filesize($fpath));
+        fclose($file);
+        return $out;
    }
 
    public function saveFaucet( Request $request) {
@@ -120,6 +144,13 @@ class FaucetController extends Controller
    public function saveTopo( Request $request) {
     file_put_contents("/home/ixpman/code/networkTester/etc/mixtt/topology.json", ($request->input('msg')));
     $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/topology.json");
+    // $out = $request;
+    return $out;
+   }
+
+   public function saveXML( Request $request) {
+    file_put_contents("/home/ixpman/code/networkTester/etc/mixtt/graph.xml", ($request->input('msg')));
+    $out = readfile("/home/ixpman/code/networkTester/etc/mixtt/graph.xml");
     // $out = $request;
     return $out;
    }
