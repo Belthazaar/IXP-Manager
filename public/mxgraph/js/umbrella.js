@@ -131,7 +131,7 @@ Umbrella.prototype.processSwitch = function (switchNode) {
                             'addr_type': 'mac',
                             'name': pname
                         }
-                        console.log(iface)
+                        // console.log(iface)
                         if (iface.getAttribute("tagged") == "true"){
                             tagged_vlans.push(vid);
                             this.addressToPort[swname][mac].vlan = vid;
@@ -148,8 +148,8 @@ Umbrella.prototype.processSwitch = function (switchNode) {
                             }
                         }
 
-                        console.log(`Printing info for port: ${pname}`)
-                        console.log(`vlan: ${vid}\t mac: ${mac}\t ipv4: ${ipv4}\t ipv6: ${ipv6} `)
+                        // console.log(`Printing info for port: ${pname}`)
+                        // console.log(`vlan: ${vid}\t mac: ${mac}\t ipv4: ${ipv4}\t ipv6: ${ipv6} `)
 
                     }
                     this.faucetObject.dps[swname]['interfaces'][port] = {
@@ -252,6 +252,7 @@ Umbrella.prototype.umbrellaACL = function (addr, addr_type, aclNum, route, sw) {
             ports.push(lastPort);
             continue;
         }
+        // console.log(this.coreLinks)
         if (prevHop) {
             for ([port, details] of Object.entries(this.coreLinks[prevHop])) {
                 if (details.hasOwnProperty(hop)) {
@@ -686,14 +687,10 @@ Umbrella.prototype.topogenerator = function(){
         var host  = new Object()
         host.name = p
         host.interfaces = []
-        console.log(host_matrix)
+        // console.log(host_matrix)
         for ([sw, swdet] of Object.entries(host_matrix[p])) {
-            console.log(`Printing sw`);
-            console.log(sw);
+
             for ([vid, details] of Object.entries(swdet)){
-                console.log(`Printing vid and details`);
-                console.log(vid);
-                console.log(details);
                 var iface = new Object();
                 if (vid != 0){
                     iface.vlan = vid
@@ -737,8 +734,8 @@ Umbrella.prototype.saveYaml = function(yamlObj){
         type: "POST",
         data: {"msg": d},
     }).done(function(msg){
-        console.log("save faucet success")
-        console.log(msg)
+        // console.log("save faucet success")
+        // console.log(msg)
         alert("faucet config generated successfully. Saved to the push-on-green module")
     })
     .fail(function(msg){
@@ -757,7 +754,7 @@ Umbrella.prototype.saveTopo = function(topo){
         data: {"msg": dstring}
     }).done(function(msg){
         console.log("save topo success")
-        console.log(msg)
+        // console.log(msg)
     })
     .fail(function(msg){
         console.log("something went wrong in saving topo")
@@ -766,7 +763,7 @@ Umbrella.prototype.saveTopo = function(topo){
 };
 
 Umbrella.prototype.saveXml = function(){
-    xmlfile = mxUtils.getPrettyXml(this.editorUi.editor.getGraphXml());
+    xmlfile = mxUtils.getXml(this.editorUi.editor.getGraphXml());
     let phpurl = window.location.origin + "/faucet/saveXML";
     dstring = String(xmlfile);
     $.ajax({
@@ -775,7 +772,7 @@ Umbrella.prototype.saveXml = function(){
         data: {"msg": dstring}
     }).done(function(msg){
         console.log("save XML success")
-        console.log(msg)
+        // console.log(msg)
     })
     .fail(function(msg){
         console.log("something went wrong in saving topo")

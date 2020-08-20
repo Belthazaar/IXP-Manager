@@ -27,20 +27,24 @@ mxSwitchConnectionHandler.prototype.getSwitchName = function(sw)
 
 mxSwitchConnectionHandler.prototype.getAvailablePorts = function(sw)
 {
-    var interfaces = null;
     var available_ports = [];
     var sw_name  = this.getSwitchName(sw);
-    if (sw.value.childNodes.length == 1)
-    {
-        interfaces = sw.value.firstChild;
+    var interfaces = null;
+
+    for (var child of sw.value.childNodes){
+        if (child.localName == "interfaces"){
+            interfaces = child;
+        }
     }
     if (interfaces != null)
     {
         for (iface of interfaces.childNodes){
-            if (iface.hasAttribute(`Core`)){
-                p = iface.getAttribute(`name`);
-                sw_port = sw_name + ',' + p;
-                available_ports.push(sw_port);
+            if (iface.localName == "iface"){
+                if (iface.hasAttribute(`Core`)){
+                    p = iface.getAttribute(`name`);
+                    sw_port = sw_name + ',' + p;
+                    available_ports.push(sw_port);
+                }
             }
         }
     }
