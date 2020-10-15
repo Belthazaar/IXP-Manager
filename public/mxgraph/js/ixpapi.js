@@ -17,7 +17,7 @@ ixpapi.prototype.apiCalls = async function () {
     this.details.switches = {};
     var me = this;
     async function loop(me) {
-        for (var i = 1; i < 20; i++) {
+        for (var i = 1; i < 40; i++) {
             id = await me.getSwitchDetails(i).then(
                 swid => {
                     if(!swid){
@@ -197,7 +197,10 @@ ixpapi.prototype.getLayer2Interfaces = async function (id, swname) {
 
 ixpapi.prototype.processLayer2Interfaces = async function (data, swname) {
     parsed = JSON.parse(data);
-
+    if (parsed.layer2interfaces.length == 0){
+        this.details.switches[swname].core = true;
+        return;
+    }
     for (iface of parsed.layer2interfaces) {
         port_name = Number((iface.name).split(this.splitChar)[2]);
         if (port_name) {

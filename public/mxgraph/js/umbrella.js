@@ -6,6 +6,7 @@ function Umbrella(editorUi) {
     this.umbrella = new Object();
     this.links = [];
     this.coreLinks = {};
+    this.coreSwitches = [];
     this.switches = [];
     this.link_nodes = [];
     this.hosts = [];
@@ -69,6 +70,13 @@ Umbrella.prototype.processSwitch = function (switchNode) {
     //         "No faucet config will be generated for this switch");
     //     return
     // }
+    if (switchNode.hasAttribute('core')){
+        var isCore = switchNode.getAttribute('core');
+        if (isCore){
+            this.coreSwitches.push(swname);
+            return;
+        }
+    }
     if (!switchNode.hasAttribute('dpid')) {
         // console.log("WARN: Switch " + switchNode.getAttribute('name') +
         //     " is not a OF switch.\n" +
@@ -148,9 +156,6 @@ Umbrella.prototype.processSwitch = function (switchNode) {
                             }
                         }
 
-                        // console.log(`Printing info for port: ${pname}`)
-                        // console.log(`vlan: ${vid}\t mac: ${mac}\t ipv4: ${ipv4}\t ipv6: ${ipv6} `)
-
                     }
                     this.faucetObject.dps[swname]['interfaces'][port] = {
                         'name': pname,
@@ -182,19 +187,30 @@ Umbrella.prototype.generateACLS = function () {
         var swName = sw[0];
         this.groupID = Math.ceil(this.groupID / 1000) * 1000;
         var aclNum = this.faucetObject.dps[swName]['dp_id'];
+        portToAddresses = {};
         for ([addr, details] of Object.entries(sw[1])) {
+            portToAddresses[details.port] = portToAddresses[details.port] || {}
             switch (details.addr_type) {
                 case "ipv4":
-                    this.ownIPv4ACL(addr, details.port, aclNum);
+                    portToAddresses[details.port].ipv4 = addr
                     break;
                 case "ipv6":
-                    this.ownIPv6ACL(addr, details.port, aclNum);
+                    portToAddresses[details.port].ipv6 = addr
                     break;
                 case "mac":
-                    this.ownMacACL(addr, details.port, aclNum);
-                    this.portToMacACL(addr, details.port, aclNum);
+                    portToAddresses[details.port].mac = addr
                     break;
             }
+        }
+        for ([port, details] of Object.entries(portToAddresses)){
+            if (details.ipv4) {
+                this.ownIPv4ACL(details.ipv4, port, aclNum, details.mac);
+            }
+            if (details.ipv6) {
+                this.ownIPv6ACL(details.ipv6, port, aclNum, details.mac);
+            }
+            this.ownMacACL(details.mac, port, aclNum);
+            this.portToMacACL(details.mac, port, aclNum);
         }
         for (var otherSW of Object.entries(this.addressToPort)) {
             var otherSWName = otherSW[0]
@@ -277,7 +293,8 @@ Umbrella.prototype.umbrellaACL = function (addr, addr_type, aclNum, route, sw) {
         var mac = "";
         count = 1;
         for (var port of ports) {
-            var portStr = port.toString(16);
+            var portnum = parseInt(port);
+            var portStr = portnum.toString(16);
             if (portStr.length == 1) {
                 portStr = "0" + portStr;
             }
@@ -305,8 +322,11 @@ Umbrella.prototype.umbrellaACL = function (addr, addr_type, aclNum, route, sw) {
             hop_count+=1;
         } else {
             var tempsw = route[hop_count];
-            var tempacl = this.faucetObject.dps[tempsw]['dp_id'];
-            this.umbrellaMacACL(last_mac, outPort, tempacl, mac);
+            if (!this.coreSwitches.includes(tempsw))
+            {
+                var tempacl = this.faucetObject.dps[tempsw]['dp_id'];
+                this.umbrellaMacACL(last_mac, outPort, tempacl, mac);
+            }
             ports.shift();
             last_mac = mac;
             outPort = ports[0];
@@ -415,7 +435,7 @@ Umbrella.prototype.djikistra = function (graph, initial, end) {
 };
 
 
-Umbrella.prototype.ownIPv4ACL = function (addr, port, acl_num) {
+Umbrella.prototype.ownIPv4ACL = function (addr, port, acl_num, mac) {
 
     this.faucetObject.acls[acl_num].push({
         "rule": {
@@ -424,6 +444,9 @@ Umbrella.prototype.ownIPv4ACL = function (addr, port, acl_num) {
             "arp_tpa": String(addr),
             "actions": {
                 "output": {
+                    "set_fields":[{
+                        "eth_dst": mac
+                    }],
                     "port": port
                 }
             }
@@ -431,7 +454,7 @@ Umbrella.prototype.ownIPv4ACL = function (addr, port, acl_num) {
     });
 };
 
-Umbrella.prototype.ownIPv6ACL = function (addr, port, acl_num) {
+Umbrella.prototype.ownIPv6ACL = function (addr, port, acl_num, mac) {
 
     this.faucetObject.acls[acl_num].push({
         "rule": {
@@ -441,6 +464,9 @@ Umbrella.prototype.ownIPv6ACL = function (addr, port, acl_num) {
             "ipv6_nd_target": String(addr),
             "actions": {
                 "output": {
+                    "set_fields":[{
+                        "eth_dst": mac
+                    }],
                     "port": port
                 }
             }
@@ -448,7 +474,7 @@ Umbrella.prototype.ownIPv6ACL = function (addr, port, acl_num) {
     });
 };
 
-Umbrella.prototype.ownMacACL = function (addr, port, acl_num) {
+Umbrella.prototype.ownMacACL = function (addr, port, acl_num, mac) {
 
     this.faucetObject.acls[acl_num].push({
         "rule": {
@@ -635,13 +661,11 @@ Umbrella.prototype.removeQuotesFromKeys = function(ports, yamlDirty){
 
 Umbrella.prototype.topogenerator = function(){
     var host_matrix = new Object();
-    var ipv4 = "127.0.0.1/8"
-    var ipv6 = "::1'/128"
-    var mac = "00:00:00:00:00:01"
-    this.topology.hosts_matrix = []
-    this.topology.switch_matrix = {}
-    this.topology.switch_matrix.dp_ids = {}
-    this.topology.switch_matrix.links = []
+    this.topology.hosts_matrix = [];
+    this.topology.switch_matrix = {};
+    this.topology.switch_matrix.dp_ids = {};
+    this.topology.switch_matrix.links = [];
+    this.topology.switch_matrix.p4 = this.coreSwitches;
     var host_matrix = {};
     var seen_ports = []
     for (sw of Object.entries(this.addressToPort)) {
@@ -671,10 +695,10 @@ Umbrella.prototype.topogenerator = function(){
             host_matrix[short_p][trunc_sw][vid].port = details.port;
             switch (details.addr_type) {
                 case "ipv4":
-                    host_matrix[short_p][trunc_sw][vid].ipv4 = addr + "/24";
+                    host_matrix[short_p][trunc_sw][vid].ipv4 = addr + "/16";
                     break;
                 case "ipv6":
-                    host_matrix[short_p][trunc_sw][vid].ipv6 = addr + "/24";
+                    host_matrix[short_p][trunc_sw][vid].ipv6 = addr + "/64";
                     break;
                 case "mac":
                     host_matrix[short_p][trunc_sw][vid].mac = addr;
